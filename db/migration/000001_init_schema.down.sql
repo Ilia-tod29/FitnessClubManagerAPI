@@ -1,0 +1,4 @@
+DROP TABLE IF EXISTS gallery;
+DROP TABLE IF EXISTS inventory;
+DROP TABLE IF EXISTS subscriptions;
+DROP TABLE IF EXISTS users;
