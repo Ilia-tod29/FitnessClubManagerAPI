@@ -1,6 +1,12 @@
 postgres:
 	docker run --name postgresDB -p 5432:5432 -e POSTGRES_USER=root -e POSTGRES_PASSWORD=root -d postgres:latest
 
+stoppostgres:
+	docker stop postgresDB
+
+rmpostgres:
+	docker rm postgresDB
+
 createdb:
 	docker exec -it postgresDB createdb --username=root --owner=root fitness_club_manager
 
@@ -19,4 +25,4 @@ migrateforce:
 sqlc:
 	sqlc generate
 
-.PHONY: postgres createdb dropdb migrateup migratedown sqlc
+.PHONY: postgres stoppostgres rmpostgres createdb dropdb migrateup migratedown sqlc
