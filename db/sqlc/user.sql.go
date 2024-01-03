@@ -13,43 +13,61 @@ const createUser = `-- name: CreateUser :one
 INSERT INTO users (
     email,
     hashed_password,
+    suspended,
     role
 ) VALUES (
-    $1, $2, $3
-) RETURNING id, email, hashed_password, role, created_at
+    $1, $2, $3, $4
+) RETURNING id, email, hashed_password, role, suspended, created_at
 `
 
 type CreateUserParams struct {
 	Email          string `json:"email"`
 	HashedPassword string `json:"hashed_password"`
+	Suspended      bool   `json:"suspended"`
 	Role           string `json:"role"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
-	row := q.db.QueryRow(ctx, createUser, arg.Email, arg.HashedPassword, arg.Role)
+	row := q.db.QueryRow(ctx, createUser,
+		arg.Email,
+		arg.HashedPassword,
+		arg.Suspended,
+		arg.Role,
+	)
 	var i User
 	err := row.Scan(
 		&i.ID,
 		&i.Email,
 		&i.HashedPassword,
 		&i.Role,
+		&i.Suspended,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
-const deleteUser = `-- name: DeleteUser :exec
+const deleteUser = `-- name: DeleteUser :one
 DELETE FROM users
 WHERE id = $1
+RETURNING id, email, hashed_password, role, suspended, created_at
 `
 
-func (q *Queries) DeleteUser(ctx context.Context, id int64) error {
-	_, err := q.db.Exec(ctx, deleteUser, id)
-	return err
+func (q *Queries) DeleteUser(ctx context.Context, id int64) (User, error) {
+	row := q.db.QueryRow(ctx, deleteUser, id)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.HashedPassword,
+		&i.Role,
+		&i.Suspended,
+		&i.CreatedAt,
+	)
+	return i, err
 }
 
 const getUser = `-- name: GetUser :one
-SELECT id, email, hashed_password, role, created_at FROM users
+SELECT id, email, hashed_password, role, suspended, created_at FROM users
 WHERE id = $1 LIMIT 1
 `
 
@@ -61,18 +79,19 @@ func (q *Queries) GetUser(ctx context.Context, id int64) (User, error) {
 		&i.Email,
 		&i.HashedPassword,
 		&i.Role,
+		&i.Suspended,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
-const listUsers = `-- name: ListUsers :many
-SELECT id, email, hashed_password, role, created_at FROM users
+const listAllUsers = `-- name: ListAllUsers :many
+SELECT id, email, hashed_password, role, suspended, created_at FROM users
 ORDER BY id
 `
 
-func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
-	rows, err := q.db.Query(ctx, listUsers)
+func (q *Queries) ListAllUsers(ctx context.Context) ([]User, error) {
+	rows, err := q.db.Query(ctx, listAllUsers)
 	if err != nil {
 		return nil, err
 	}
@@ -85,6 +104,46 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 			&i.Email,
 			&i.HashedPassword,
 			&i.Role,
+			&i.Suspended,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listUsers = `-- name: ListUsers :many
+SELECT id, email, hashed_password, role, suspended, created_at FROM users
+ORDER BY id
+LIMIT $1
+OFFSET $2
+`
+
+type ListUsersParams struct {
+	Limit  int64 `json:"limit"`
+	Offset int64 `json:"offset"`
+}
+
+func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]User, error) {
+	rows, err := q.db.Query(ctx, listUsers, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []User{}
+	for rows.Next() {
+		var i User
+		if err := rows.Scan(
+			&i.ID,
+			&i.Email,
+			&i.HashedPassword,
+			&i.Role,
+			&i.Suspended,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -99,24 +158,25 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 
 const updateUser = `-- name: UpdateUser :one
 UPDATE users
-set hashed_password = $2
+set suspended = $2
 WHERE id = $1
-RETURNING id, email, hashed_password, role, created_at
+RETURNING id, email, hashed_password, role, suspended, created_at
 `
 
 type UpdateUserParams struct {
-	ID             int64  `json:"id"`
-	HashedPassword string `json:"hashed_password"`
+	ID        int64 `json:"id"`
+	Suspended bool  `json:"suspended"`
 }
 
 func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error) {
-	row := q.db.QueryRow(ctx, updateUser, arg.ID, arg.HashedPassword)
+	row := q.db.QueryRow(ctx, updateUser, arg.ID, arg.Suspended)
 	var i User
 	err := row.Scan(
 		&i.ID,
 		&i.Email,
 		&i.HashedPassword,
 		&i.Role,
+		&i.Suspended,
 		&i.CreatedAt,
 	)
 	return i, err

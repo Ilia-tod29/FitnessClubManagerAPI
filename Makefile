@@ -13,6 +13,9 @@ createdb:
 dropdb:
 	docker exec -it postgresDB dropdb fitness_club_manager
 
+createmigration:
+	migrate create -ext sql -dir db/migration -seq add_suspension #add a name of the migration - e.g. init_schema
+
 migrateup:
 	migrate -path db/migration -database "postgresql://root:root@localhost:5432/fitness_club_manager?sslmode=disable" -verbose up
 
@@ -20,7 +23,7 @@ migratedown:
 	migrate -path db/migration -database "postgresql://root:root@localhost:5432/fitness_club_manager?sslmode=disable" -verbose down
 
 migrateforce:
-	migrate -path db/migration -database "postgresql://root:root@localhost:5432/fitness_club_manager?sslmode=disable" -verbose force #add a version after the force
+	migrate -path db/migration -database "postgresql://root:root@localhost:5432/fitness_club_manager?sslmode=disable" -verbose force 1 #add a version after the force - e.g. 1
 
 sqlc:
 	sqlc generate
@@ -28,4 +31,4 @@ sqlc:
 server:
 	go run main.go
 
-.PHONY: postgres stoppostgres rmpostgres createdb dropdb migrateup migratedown sqlc server
+.PHONY: postgres stoppostgres rmpostgres createdb dropdb createmigration migrateup migratedown sqlc server

@@ -10,6 +10,7 @@ CREATE TABLE "users" (
                          "email" varchar UNIQUE NOT NULL,
                          "hashed_password" varchar NOT NULL,
                          "role" varchar NOT NULL DEFAULT 'user',
+                         "suspended" boolean NOT NULL DEFAULT 'false',
                          "created_at" timestamptz NOT NULL DEFAULT (now())
 );
 

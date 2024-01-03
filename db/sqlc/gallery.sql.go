@@ -48,13 +48,45 @@ func (q *Queries) GetGalleryItem(ctx context.Context, id int64) (Gallery, error)
 	return i, err
 }
 
-const listGalleryItem = `-- name: ListGalleryItem :many
+const listAllGalleryItems = `-- name: ListAllGalleryItems :many
 SELECT id, image, created_at FROM gallery
 ORDER BY id
 `
 
-func (q *Queries) ListGalleryItem(ctx context.Context) ([]Gallery, error) {
-	rows, err := q.db.Query(ctx, listGalleryItem)
+func (q *Queries) ListAllGalleryItems(ctx context.Context) ([]Gallery, error) {
+	rows, err := q.db.Query(ctx, listAllGalleryItems)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Gallery{}
+	for rows.Next() {
+		var i Gallery
+		if err := rows.Scan(&i.ID, &i.Image, &i.CreatedAt); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listGalleryItems = `-- name: ListGalleryItems :many
+SELECT id, image, created_at FROM gallery
+ORDER BY id
+LIMIT $1
+OFFSET $2
+`
+
+type ListGalleryItemsParams struct {
+	Limit  int64 `json:"limit"`
+	Offset int64 `json:"offset"`
+}
+
+func (q *Queries) ListGalleryItems(ctx context.Context, arg ListGalleryItemsParams) ([]Gallery, error) {
+	rows, err := q.db.Query(ctx, listGalleryItems, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}

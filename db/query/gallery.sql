@@ -9,9 +9,15 @@ INSERT INTO gallery (
 SELECT * FROM gallery
 WHERE id = $1 LIMIT 1;
 
--- name: ListGalleryItem :many
+-- name: ListAllGalleryItems :many
 SELECT * FROM gallery
 ORDER BY id;
+
+-- name: ListGalleryItems :many
+SELECT * FROM gallery
+ORDER BY id
+LIMIT $1
+OFFSET $2;
 
 -- name: UpdateGalleryItem :one
 UPDATE gallery

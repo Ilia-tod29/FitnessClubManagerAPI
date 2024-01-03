@@ -10,9 +10,15 @@ INSERT INTO inventory (
 SELECT * FROM inventory
 WHERE id = $1 LIMIT 1;
 
--- name: ListInventoryItems :many
+-- name: ListAllInventoryItems :many
 SELECT * FROM inventory
 ORDER BY id;
+
+-- name: ListInventoryItems :many
+SELECT * FROM inventory
+ORDER BY id
+LIMIT $1
+OFFSET $2;
 
 -- name: UpdateInventoryItem :one
 UPDATE inventory

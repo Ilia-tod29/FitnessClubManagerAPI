@@ -64,13 +64,50 @@ func (q *Queries) GetInventoryItem(ctx context.Context, id int64) (Inventory, er
 	return i, err
 }
 
-const listInventoryItems = `-- name: ListInventoryItems :many
+const listAllInventoryItems = `-- name: ListAllInventoryItems :many
 SELECT id, name, image, created_at FROM inventory
 ORDER BY id
 `
 
-func (q *Queries) ListInventoryItems(ctx context.Context) ([]Inventory, error) {
-	rows, err := q.db.Query(ctx, listInventoryItems)
+func (q *Queries) ListAllInventoryItems(ctx context.Context) ([]Inventory, error) {
+	rows, err := q.db.Query(ctx, listAllInventoryItems)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Inventory{}
+	for rows.Next() {
+		var i Inventory
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Image,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listInventoryItems = `-- name: ListInventoryItems :many
+SELECT id, name, image, created_at FROM inventory
+ORDER BY id
+LIMIT $1
+OFFSET $2
+`
+
+type ListInventoryItemsParams struct {
+	Limit  int64 `json:"limit"`
+	Offset int64 `json:"offset"`
+}
+
+func (q *Queries) ListInventoryItems(ctx context.Context, arg ListInventoryItemsParams) ([]Inventory, error) {
+	rows, err := q.db.Query(ctx, listInventoryItems, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}

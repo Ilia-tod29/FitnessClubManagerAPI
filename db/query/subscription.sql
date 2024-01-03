@@ -11,6 +11,12 @@ INSERT INTO subscriptions (
 SELECT * FROM subscriptions
 WHERE id = $1 LIMIT 1;
 
--- name: ListSubscription :many
+-- name: ListAllSubscriptions :many
 SELECT * FROM subscriptions
 ORDER BY id;
+
+-- name: ListSubscriptions :many
+SELECT * FROM subscriptions
+ORDER BY id
+LIMIT $1
+OFFSET $2;

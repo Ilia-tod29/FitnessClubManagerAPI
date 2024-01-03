@@ -34,5 +34,6 @@ type User struct {
 	Email          string             `json:"email"`
 	HashedPassword string             `json:"hashed_password"`
 	Role           string             `json:"role"`
+	Suspended      bool               `json:"suspended"`
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 }

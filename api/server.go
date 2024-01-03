@@ -26,7 +26,13 @@ func NewServer(store *db.SQLStore) (*Server, error) {
 
 	router := gin.Default()
 
+	// TODO: additional functionality - change password
 	router.POST("/users", server.createUser)
+	router.PUT("/users/:id", server.updateUser)
+	router.GET("/users/:id", server.getUser)
+	router.GET("/allusers", server.listAllUsers)
+	router.GET("/users", server.listUsers)
+	router.DELETE("/users/:id", server.deleteUser)
 
 	server.router = router
 
