@@ -2,15 +2,16 @@ package api
 
 import (
 	db "FitnessClubManagerAPI/db/sqlc"
+	"FitnessClubManagerAPI/util"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
 	"net/http"
 )
 
 type createUserRequest struct {
-	Email          string `json:"email" binding:"required"`
-	HashedPassword string `json:"hashed_password" binding:"required"`
-	Role           string `json:"role" binding:"required,oneof=admin user"`
+	Email    string `json:"email" binding:"required"`
+	Password string `json:"password" binding:"required"`
+	Role     string `json:"role" binding:"required,oneof=admin user"`
 }
 
 type updateUserRequest struct {
@@ -24,9 +25,15 @@ func (s *Server) createUser(ctx *gin.Context) {
 		return
 	}
 
+	hashedPassword, err := util.HashPassword(req.Password)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
 	arg := db.CreateUserParams{
 		Email:          req.Email,
-		HashedPassword: req.HashedPassword,
+		HashedPassword: hashedPassword,
 		// We don't suspend a user on creation
 		Suspended: false,
 		Role:      req.Role,

@@ -17,7 +17,7 @@ INSERT INTO users (
     role
 ) VALUES (
     $1, $2, $3, $4
-) RETURNING id, email, hashed_password, role, suspended, created_at
+) RETURNING id, email, suspended, role
 `
 
 type CreateUserParams struct {
@@ -27,21 +27,26 @@ type CreateUserParams struct {
 	Role           string `json:"role"`
 }
 
-func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
+type CreateUserRow struct {
+	ID        int64  `json:"id"`
+	Email     string `json:"email"`
+	Suspended bool   `json:"suspended"`
+	Role      string `json:"role"`
+}
+
+func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateUserRow, error) {
 	row := q.db.QueryRow(ctx, createUser,
 		arg.Email,
 		arg.HashedPassword,
 		arg.Suspended,
 		arg.Role,
 	)
-	var i User
+	var i CreateUserRow
 	err := row.Scan(
 		&i.ID,
 		&i.Email,
-		&i.HashedPassword,
-		&i.Role,
 		&i.Suspended,
-		&i.CreatedAt,
+		&i.Role,
 	)
 	return i, err
 }
@@ -49,63 +54,78 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 const deleteUser = `-- name: DeleteUser :one
 DELETE FROM users
 WHERE id = $1
-RETURNING id, email, hashed_password, role, suspended, created_at
+RETURNING id, email, suspended, role
 `
 
-func (q *Queries) DeleteUser(ctx context.Context, id int64) (User, error) {
+type DeleteUserRow struct {
+	ID        int64  `json:"id"`
+	Email     string `json:"email"`
+	Suspended bool   `json:"suspended"`
+	Role      string `json:"role"`
+}
+
+func (q *Queries) DeleteUser(ctx context.Context, id int64) (DeleteUserRow, error) {
 	row := q.db.QueryRow(ctx, deleteUser, id)
-	var i User
+	var i DeleteUserRow
 	err := row.Scan(
 		&i.ID,
 		&i.Email,
-		&i.HashedPassword,
-		&i.Role,
 		&i.Suspended,
-		&i.CreatedAt,
+		&i.Role,
 	)
 	return i, err
 }
 
 const getUser = `-- name: GetUser :one
-SELECT id, email, hashed_password, role, suspended, created_at FROM users
+SELECT id, email, suspended, role FROM users
 WHERE id = $1 LIMIT 1
 `
 
-func (q *Queries) GetUser(ctx context.Context, id int64) (User, error) {
+type GetUserRow struct {
+	ID        int64  `json:"id"`
+	Email     string `json:"email"`
+	Suspended bool   `json:"suspended"`
+	Role      string `json:"role"`
+}
+
+func (q *Queries) GetUser(ctx context.Context, id int64) (GetUserRow, error) {
 	row := q.db.QueryRow(ctx, getUser, id)
-	var i User
+	var i GetUserRow
 	err := row.Scan(
 		&i.ID,
 		&i.Email,
-		&i.HashedPassword,
-		&i.Role,
 		&i.Suspended,
-		&i.CreatedAt,
+		&i.Role,
 	)
 	return i, err
 }
 
 const listAllUsers = `-- name: ListAllUsers :many
-SELECT id, email, hashed_password, role, suspended, created_at FROM users
+SELECT id, email, suspended, role FROM users
 ORDER BY id
 `
 
-func (q *Queries) ListAllUsers(ctx context.Context) ([]User, error) {
+type ListAllUsersRow struct {
+	ID        int64  `json:"id"`
+	Email     string `json:"email"`
+	Suspended bool   `json:"suspended"`
+	Role      string `json:"role"`
+}
+
+func (q *Queries) ListAllUsers(ctx context.Context) ([]ListAllUsersRow, error) {
 	rows, err := q.db.Query(ctx, listAllUsers)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []User{}
+	items := []ListAllUsersRow{}
 	for rows.Next() {
-		var i User
+		var i ListAllUsersRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Email,
-			&i.HashedPassword,
-			&i.Role,
 			&i.Suspended,
-			&i.CreatedAt,
+			&i.Role,
 		); err != nil {
 			return nil, err
 		}
@@ -118,7 +138,7 @@ func (q *Queries) ListAllUsers(ctx context.Context) ([]User, error) {
 }
 
 const listUsers = `-- name: ListUsers :many
-SELECT id, email, hashed_password, role, suspended, created_at FROM users
+SELECT id, email, suspended, role FROM users
 ORDER BY id
 LIMIT $1
 OFFSET $2
@@ -129,22 +149,27 @@ type ListUsersParams struct {
 	Offset int64 `json:"offset"`
 }
 
-func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]User, error) {
+type ListUsersRow struct {
+	ID        int64  `json:"id"`
+	Email     string `json:"email"`
+	Suspended bool   `json:"suspended"`
+	Role      string `json:"role"`
+}
+
+func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]ListUsersRow, error) {
 	rows, err := q.db.Query(ctx, listUsers, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []User{}
+	items := []ListUsersRow{}
 	for rows.Next() {
-		var i User
+		var i ListUsersRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Email,
-			&i.HashedPassword,
-			&i.Role,
 			&i.Suspended,
-			&i.CreatedAt,
+			&i.Role,
 		); err != nil {
 			return nil, err
 		}
@@ -160,7 +185,7 @@ const updateUser = `-- name: UpdateUser :one
 UPDATE users
 set suspended = $2
 WHERE id = $1
-RETURNING id, email, hashed_password, role, suspended, created_at
+RETURNING id, email, suspended, role
 `
 
 type UpdateUserParams struct {
@@ -168,16 +193,21 @@ type UpdateUserParams struct {
 	Suspended bool  `json:"suspended"`
 }
 
-func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error) {
+type UpdateUserRow struct {
+	ID        int64  `json:"id"`
+	Email     string `json:"email"`
+	Suspended bool   `json:"suspended"`
+	Role      string `json:"role"`
+}
+
+func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (UpdateUserRow, error) {
 	row := q.db.QueryRow(ctx, updateUser, arg.ID, arg.Suspended)
-	var i User
+	var i UpdateUserRow
 	err := row.Scan(
 		&i.ID,
 		&i.Email,
-		&i.HashedPassword,
-		&i.Role,
 		&i.Suspended,
-		&i.CreatedAt,
+		&i.Role,
 	)
 	return i, err
 }
