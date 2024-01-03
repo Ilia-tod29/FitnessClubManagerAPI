@@ -7,6 +7,8 @@ package db
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const createUser = `-- name: CreateUser :one
@@ -17,7 +19,7 @@ INSERT INTO users (
     role
 ) VALUES (
     $1, $2, $3, $4
-) RETURNING id, email, suspended, role
+) RETURNING id, email, suspended, role, created_at
 `
 
 type CreateUserParams struct {
@@ -28,10 +30,11 @@ type CreateUserParams struct {
 }
 
 type CreateUserRow struct {
-	ID        int64  `json:"id"`
-	Email     string `json:"email"`
-	Suspended bool   `json:"suspended"`
-	Role      string `json:"role"`
+	ID        int64              `json:"id"`
+	Email     string             `json:"email"`
+	Suspended bool               `json:"suspended"`
+	Role      string             `json:"role"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateUserRow, error) {
@@ -47,6 +50,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateU
 		&i.Email,
 		&i.Suspended,
 		&i.Role,
+		&i.CreatedAt,
 	)
 	return i, err
 }
@@ -54,14 +58,15 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateU
 const deleteUser = `-- name: DeleteUser :one
 DELETE FROM users
 WHERE id = $1
-RETURNING id, email, suspended, role
+RETURNING id, email, suspended, role, created_at
 `
 
 type DeleteUserRow struct {
-	ID        int64  `json:"id"`
-	Email     string `json:"email"`
-	Suspended bool   `json:"suspended"`
-	Role      string `json:"role"`
+	ID        int64              `json:"id"`
+	Email     string             `json:"email"`
+	Suspended bool               `json:"suspended"`
+	Role      string             `json:"role"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
 func (q *Queries) DeleteUser(ctx context.Context, id int64) (DeleteUserRow, error) {
@@ -72,20 +77,22 @@ func (q *Queries) DeleteUser(ctx context.Context, id int64) (DeleteUserRow, erro
 		&i.Email,
 		&i.Suspended,
 		&i.Role,
+		&i.CreatedAt,
 	)
 	return i, err
 }
 
 const getUser = `-- name: GetUser :one
-SELECT id, email, suspended, role FROM users
+SELECT id, email, suspended, role, created_at FROM users
 WHERE id = $1 LIMIT 1
 `
 
 type GetUserRow struct {
-	ID        int64  `json:"id"`
-	Email     string `json:"email"`
-	Suspended bool   `json:"suspended"`
-	Role      string `json:"role"`
+	ID        int64              `json:"id"`
+	Email     string             `json:"email"`
+	Suspended bool               `json:"suspended"`
+	Role      string             `json:"role"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
 func (q *Queries) GetUser(ctx context.Context, id int64) (GetUserRow, error) {
@@ -96,20 +103,22 @@ func (q *Queries) GetUser(ctx context.Context, id int64) (GetUserRow, error) {
 		&i.Email,
 		&i.Suspended,
 		&i.Role,
+		&i.CreatedAt,
 	)
 	return i, err
 }
 
 const listAllUsers = `-- name: ListAllUsers :many
-SELECT id, email, suspended, role FROM users
+SELECT id, email, suspended, role, created_at FROM users
 ORDER BY id
 `
 
 type ListAllUsersRow struct {
-	ID        int64  `json:"id"`
-	Email     string `json:"email"`
-	Suspended bool   `json:"suspended"`
-	Role      string `json:"role"`
+	ID        int64              `json:"id"`
+	Email     string             `json:"email"`
+	Suspended bool               `json:"suspended"`
+	Role      string             `json:"role"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
 func (q *Queries) ListAllUsers(ctx context.Context) ([]ListAllUsersRow, error) {
@@ -126,6 +135,7 @@ func (q *Queries) ListAllUsers(ctx context.Context) ([]ListAllUsersRow, error) {
 			&i.Email,
 			&i.Suspended,
 			&i.Role,
+			&i.CreatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -138,7 +148,7 @@ func (q *Queries) ListAllUsers(ctx context.Context) ([]ListAllUsersRow, error) {
 }
 
 const listUsers = `-- name: ListUsers :many
-SELECT id, email, suspended, role FROM users
+SELECT id, email, suspended, role, created_at FROM users
 ORDER BY id
 LIMIT $1
 OFFSET $2
@@ -150,10 +160,11 @@ type ListUsersParams struct {
 }
 
 type ListUsersRow struct {
-	ID        int64  `json:"id"`
-	Email     string `json:"email"`
-	Suspended bool   `json:"suspended"`
-	Role      string `json:"role"`
+	ID        int64              `json:"id"`
+	Email     string             `json:"email"`
+	Suspended bool               `json:"suspended"`
+	Role      string             `json:"role"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
 func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]ListUsersRow, error) {
@@ -170,6 +181,7 @@ func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]ListUse
 			&i.Email,
 			&i.Suspended,
 			&i.Role,
+			&i.CreatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -185,7 +197,7 @@ const updateUser = `-- name: UpdateUser :one
 UPDATE users
 set suspended = $2
 WHERE id = $1
-RETURNING id, email, suspended, role
+RETURNING id, email, suspended, role, created_at
 `
 
 type UpdateUserParams struct {
@@ -194,10 +206,11 @@ type UpdateUserParams struct {
 }
 
 type UpdateUserRow struct {
-	ID        int64  `json:"id"`
-	Email     string `json:"email"`
-	Suspended bool   `json:"suspended"`
-	Role      string `json:"role"`
+	ID        int64              `json:"id"`
+	Email     string             `json:"email"`
+	Suspended bool               `json:"suspended"`
+	Role      string             `json:"role"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
 func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (UpdateUserRow, error) {
@@ -208,6 +221,7 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (UpdateU
 		&i.Email,
 		&i.Suspended,
 		&i.Role,
+		&i.CreatedAt,
 	)
 	return i, err
 }
