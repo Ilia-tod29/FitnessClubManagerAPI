@@ -34,6 +34,11 @@ func (s *Server) createUser(ctx *gin.Context) {
 
 	user, err := s.store.CreateUser(ctx, arg)
 	if err != nil {
+		errCode := db.ErrorCode(err)
+		if errCode == db.UniqueViolation {
+			ctx.JSON(http.StatusForbidden, errorResponse(err))
+			return
+		}
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}

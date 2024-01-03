@@ -74,6 +74,11 @@ func (s *Server) createSubscription(ctx *gin.Context) {
 	}
 	subscription, err := s.store.CreateSubscription(ctx, arg)
 	if err != nil {
+		errCode := db.ErrorCode(err)
+		if errCode == db.ForeignKeyViolation {
+			ctx.JSON(http.StatusForbidden, errorResponse(err))
+			return
+		}
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
