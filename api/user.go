@@ -13,15 +13,6 @@ type createUserRequest struct {
 	Role           string `json:"role" binding:"required,oneof=admin user"`
 }
 
-type listUserRequest struct {
-	PageID   int64 `form:"page_id" binding:"required,min=1"`
-	PageSize int64 `form:"page_size" binding:"required,min=5,max=20"`
-}
-
-type getUserRequest struct {
-	ID int64 `uri:"id" binding:"required,min=1"`
-}
-
 type updateUserRequest struct {
 	Suspended string `json:"suspended" binding:"required,oneof=true false"`
 }
@@ -51,7 +42,7 @@ func (s *Server) createUser(ctx *gin.Context) {
 }
 
 func (s *Server) getUser(ctx *gin.Context) {
-	var req getUserRequest
+	var req idRequest
 	if err := ctx.ShouldBindUri(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
 		return
@@ -80,8 +71,8 @@ func (s *Server) listAllUsers(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, allUsers)
 }
 
-func (s *Server) listUsers(ctx *gin.Context) {
-	var req listUserRequest
+func (s *Server) listUsersByPages(ctx *gin.Context) {
+	var req listResourceByPagesRequest
 	if err := ctx.ShouldBindQuery(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
 		return
@@ -101,7 +92,7 @@ func (s *Server) listUsers(ctx *gin.Context) {
 }
 
 func (s *Server) updateUser(ctx *gin.Context) {
-	var req getUserRequest
+	var req idRequest
 	if err := ctx.ShouldBindUri(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
 		return
@@ -136,7 +127,7 @@ func (s *Server) updateUser(ctx *gin.Context) {
 }
 
 func (s *Server) deleteUser(ctx *gin.Context) {
-	var req getUserRequest
+	var req idRequest
 	if err := ctx.ShouldBindUri(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
 		return

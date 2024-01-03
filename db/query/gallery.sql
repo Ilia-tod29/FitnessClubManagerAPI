@@ -19,12 +19,7 @@ ORDER BY id
 LIMIT $1
 OFFSET $2;
 
--- name: UpdateGalleryItem :one
-UPDATE gallery
-set image = $2
+-- name: DeleteGalleryItem :one
+DELETE FROM gallery
 WHERE id = $1
 RETURNING *;
-
--- name: DeleteGalleryItem :exec
-DELETE FROM gallery
-WHERE id = $1;

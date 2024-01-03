@@ -37,14 +37,22 @@ func (q *Queries) CreateInventoryItem(ctx context.Context, arg CreateInventoryIt
 	return i, err
 }
 
-const deleteInventoryItem = `-- name: DeleteInventoryItem :exec
+const deleteInventoryItem = `-- name: DeleteInventoryItem :one
 DELETE FROM inventory
 WHERE id = $1
+RETURNING id, name, image, created_at
 `
 
-func (q *Queries) DeleteInventoryItem(ctx context.Context, id int64) error {
-	_, err := q.db.Exec(ctx, deleteInventoryItem, id)
-	return err
+func (q *Queries) DeleteInventoryItem(ctx context.Context, id int64) (Inventory, error) {
+	row := q.db.QueryRow(ctx, deleteInventoryItem, id)
+	var i Inventory
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Image,
+		&i.CreatedAt,
+	)
+	return i, err
 }
 
 const getInventoryItem = `-- name: GetInventoryItem :one

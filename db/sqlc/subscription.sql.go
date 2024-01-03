@@ -40,6 +40,25 @@ func (q *Queries) CreateSubscription(ctx context.Context, arg CreateSubscription
 	return i, err
 }
 
+const deleteSubscription = `-- name: DeleteSubscription :one
+DELETE FROM subscriptions
+WHERE id = $1
+RETURNING id, user_id, start_date, end_date, created_at
+`
+
+func (q *Queries) DeleteSubscription(ctx context.Context, id int64) (Subscription, error) {
+	row := q.db.QueryRow(ctx, deleteSubscription, id)
+	var i Subscription
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.StartDate,
+		&i.EndDate,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const getSubscription = `-- name: GetSubscription :one
 SELECT id, user_id, start_date, end_date, created_at FROM subscriptions
 WHERE id = $1 LIMIT 1
@@ -65,6 +84,38 @@ ORDER BY id
 
 func (q *Queries) ListAllSubscriptions(ctx context.Context) ([]Subscription, error) {
 	rows, err := q.db.Query(ctx, listAllSubscriptions)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Subscription{}
+	for rows.Next() {
+		var i Subscription
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.StartDate,
+			&i.EndDate,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listAllSubscriptionsForAGivenUser = `-- name: ListAllSubscriptionsForAGivenUser :many
+SELECT id, user_id, start_date, end_date, created_at FROM subscriptions
+WHERE user_id = $1
+ORDER BY id
+`
+
+func (q *Queries) ListAllSubscriptionsForAGivenUser(ctx context.Context, userID int64) ([]Subscription, error) {
+	rows, err := q.db.Query(ctx, listAllSubscriptionsForAGivenUser, userID)
 	if err != nil {
 		return nil, err
 	}

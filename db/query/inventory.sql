@@ -39,6 +39,7 @@ set image = $2
 WHERE id = $1
 RETURNING *;
 
--- name: DeleteInventoryItem :exec
+-- name: DeleteInventoryItem :one
 DELETE FROM inventory
-WHERE id = $1;
+WHERE id = $1
+RETURNING *;

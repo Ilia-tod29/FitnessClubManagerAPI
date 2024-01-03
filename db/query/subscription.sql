@@ -20,3 +20,13 @@ SELECT * FROM subscriptions
 ORDER BY id
 LIMIT $1
 OFFSET $2;
+
+-- name: ListAllSubscriptionsForAGivenUser :many
+SELECT * FROM subscriptions
+WHERE user_id = $1
+ORDER BY id;
+
+-- name: DeleteSubscription :one
+DELETE FROM subscriptions
+WHERE id = $1
+RETURNING *;
