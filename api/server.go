@@ -2,6 +2,9 @@ package api
 
 import (
 	db "FitnessClubManagerAPI/db/sqlc"
+	"FitnessClubManagerAPI/token"
+	"FitnessClubManagerAPI/util"
+	"fmt"
 	"github.com/gin-gonic/gin"
 )
 
@@ -18,65 +21,70 @@ type listResourceByPagesRequest struct {
 
 // Server serves HTTP requests for our banking service.
 type Server struct {
-	store  *db.SQLStore
-	router *gin.Engine
+	config     util.Config
+	store      *db.SQLStore
+	tokenMaker token.Maker
+	router     *gin.Engine
 }
 
 // NewServer creates a new HTTP server and set up routing.
-func NewServer(store *db.SQLStore) (*Server, error) {
-	//tokenMaker, err := token.NewPasetoMaker(config.TokenSymmetricKey)
-	//if err != nil {
-	//	return nil, fmt.Errorf("cannot create token maker: %w", err)
-	//}
-
-	server := &Server{
-		//config:     config,
-		store: store,
-		//tokenMaker: tokenMaker,
+func NewServer(config util.Config, store *db.SQLStore) (*Server, error) {
+	tokenMaker, err := token.NewPasetoMaker(config.TokenSymmetricKey)
+	if err != nil {
+		return nil, fmt.Errorf("cannot create token maker: %w", err)
 	}
 
-	router := gin.Default()
-
-	// Users
-	// TODO: additional functionality - change password
-	router.POST("/users", server.createUser)
-	router.PUT("/users/:id", server.updateUser)
-	router.GET("/users/:id", server.getUser)
-	router.GET("/allusers", server.listAllUsers)
-	router.GET("/users", server.listUsersByPages)
-	router.DELETE("/users/:id", server.deleteUser)
-
-	// Subscriptions
-	router.POST("/subscriptions", server.createSubscription)
-	router.GET("/subscriptions/:id", server.getSubscription)
-	router.GET("/subscriptions/user/:id", server.getAllSubscriptionsForAGivenUser)
-	router.GET("/allsubscriptions", server.listAllSubscriptions)
-	router.GET("/subscriptions", server.listSubscriptionsByPages)
-	router.DELETE("/subscriptions/:id", server.deleteSubscription)
-
-	// Inventory Items
-	router.POST("/inventoryitems", server.createInventoryItem)
-	router.PUT("/inventoryitems/:id", server.updateInventoryItem)
-	router.GET("/inventoryitems/:id", server.getInventoryItem)
-	router.GET("/allinventoryitems", server.listAllInventoryItems)
-	router.GET("/inventoryitems", server.listInventoryItemsByPages)
-	router.DELETE("/inventoryitems/:id", server.deleteInventoryItem)
-
-	// Gallery Items
-	router.POST("/gallery", server.createGalleryItem)
-	router.GET("/gallery/:id", server.getGalleryItem)
-	router.GET("/allgallery", server.listAllGalleryItems)
-	router.GET("/gallery", server.listGalleryItemsByPages)
-	router.DELETE("/gallery/:id", server.deleteGalleryItem)
-
-	server.router = router
+	server := &Server{
+		config:     config,
+		store:      store,
+		tokenMaker: tokenMaker,
+	}
 
 	//if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
 	//	v.RegisterValidation("currency", validCurrency)
 	//}
-	//
-	//server.setupRouter()
+
+	server.setupRouter()
 	return server, nil
+}
+
+func (s *Server) setupRouter() {
+	router := gin.Default()
+
+	// Users
+	// TODO: additional functionality - change password
+	router.POST("/users", s.createUser)
+	router.POST("/users/login", s.loginUser)
+	router.PUT("/users/:id", s.updateUser)
+	router.GET("/users/:id", s.getUser)
+	router.GET("/allusers", s.listAllUsers)
+	router.GET("/users", s.listUsersByPages)
+	router.DELETE("/users/:id", s.deleteUser)
+
+	// Subscriptions
+	router.POST("/subscriptions", s.createSubscription)
+	router.GET("/subscriptions/:id", s.getSubscription)
+	router.GET("/subscriptions/user/:id", s.getAllSubscriptionsForAGivenUser)
+	router.GET("/allsubscriptions", s.listAllSubscriptions)
+	router.GET("/subscriptions", s.listSubscriptionsByPages)
+	router.DELETE("/subscriptions/:id", s.deleteSubscription)
+
+	// Inventory Items
+	router.POST("/inventoryitems", s.createInventoryItem)
+	router.PUT("/inventoryitems/:id", s.updateInventoryItem)
+	router.GET("/inventoryitems/:id", s.getInventoryItem)
+	router.GET("/allinventoryitems", s.listAllInventoryItems)
+	router.GET("/inventoryitems", s.listInventoryItemsByPages)
+	router.DELETE("/inventoryitems/:id", s.deleteInventoryItem)
+
+	// Gallery Items
+	router.POST("/gallery", s.createGalleryItem)
+	router.GET("/gallery/:id", s.getGalleryItem)
+	router.GET("/allgallery", s.listAllGalleryItems)
+	router.GET("/gallery", s.listGalleryItemsByPages)
+	router.DELETE("/gallery/:id", s.deleteGalleryItem)
+
+	s.router = router
 }
 
 // Start runs the HTTP server on a specific address.

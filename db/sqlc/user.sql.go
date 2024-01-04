@@ -7,8 +7,6 @@ package db
 
 import (
 	"context"
-
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const createUser = `-- name: CreateUser :one
@@ -19,7 +17,7 @@ INSERT INTO users (
     role
 ) VALUES (
     $1, $2, $3, $4
-) RETURNING id, email, suspended, role, created_at
+) RETURNING id, email, hashed_password, role, suspended, created_at
 `
 
 type CreateUserParams struct {
@@ -29,27 +27,20 @@ type CreateUserParams struct {
 	Role           string `json:"role"`
 }
 
-type CreateUserRow struct {
-	ID        int64              `json:"id"`
-	Email     string             `json:"email"`
-	Suspended bool               `json:"suspended"`
-	Role      string             `json:"role"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
-}
-
-func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateUserRow, error) {
+func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
 	row := q.db.QueryRow(ctx, createUser,
 		arg.Email,
 		arg.HashedPassword,
 		arg.Suspended,
 		arg.Role,
 	)
-	var i CreateUserRow
+	var i User
 	err := row.Scan(
 		&i.ID,
 		&i.Email,
-		&i.Suspended,
+		&i.HashedPassword,
 		&i.Role,
+		&i.Suspended,
 		&i.CreatedAt,
 	)
 	return i, err
@@ -58,83 +49,81 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateU
 const deleteUser = `-- name: DeleteUser :one
 DELETE FROM users
 WHERE id = $1
-RETURNING id, email, suspended, role, created_at
+RETURNING id, email, hashed_password, role, suspended, created_at
 `
 
-type DeleteUserRow struct {
-	ID        int64              `json:"id"`
-	Email     string             `json:"email"`
-	Suspended bool               `json:"suspended"`
-	Role      string             `json:"role"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
-}
-
-func (q *Queries) DeleteUser(ctx context.Context, id int64) (DeleteUserRow, error) {
+func (q *Queries) DeleteUser(ctx context.Context, id int64) (User, error) {
 	row := q.db.QueryRow(ctx, deleteUser, id)
-	var i DeleteUserRow
+	var i User
 	err := row.Scan(
 		&i.ID,
 		&i.Email,
-		&i.Suspended,
+		&i.HashedPassword,
 		&i.Role,
+		&i.Suspended,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
 const getUser = `-- name: GetUser :one
-SELECT id, email, suspended, role, created_at FROM users
+SELECT id, email, hashed_password, role, suspended, created_at FROM users
 WHERE id = $1 LIMIT 1
 `
 
-type GetUserRow struct {
-	ID        int64              `json:"id"`
-	Email     string             `json:"email"`
-	Suspended bool               `json:"suspended"`
-	Role      string             `json:"role"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
-}
-
-func (q *Queries) GetUser(ctx context.Context, id int64) (GetUserRow, error) {
+func (q *Queries) GetUser(ctx context.Context, id int64) (User, error) {
 	row := q.db.QueryRow(ctx, getUser, id)
-	var i GetUserRow
+	var i User
 	err := row.Scan(
 		&i.ID,
 		&i.Email,
-		&i.Suspended,
+		&i.HashedPassword,
 		&i.Role,
+		&i.Suspended,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getUserByEmail = `-- name: GetUserByEmail :one
+SELECT id, email, hashed_password, role, suspended, created_at FROM users
+WHERE email = $1 LIMIT 1
+`
+
+func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
+	row := q.db.QueryRow(ctx, getUserByEmail, email)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.HashedPassword,
+		&i.Role,
+		&i.Suspended,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
 const listAllUsers = `-- name: ListAllUsers :many
-SELECT id, email, suspended, role, created_at FROM users
+SELECT id, email, hashed_password, role, suspended, created_at FROM users
 ORDER BY id
 `
 
-type ListAllUsersRow struct {
-	ID        int64              `json:"id"`
-	Email     string             `json:"email"`
-	Suspended bool               `json:"suspended"`
-	Role      string             `json:"role"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
-}
-
-func (q *Queries) ListAllUsers(ctx context.Context) ([]ListAllUsersRow, error) {
+func (q *Queries) ListAllUsers(ctx context.Context) ([]User, error) {
 	rows, err := q.db.Query(ctx, listAllUsers)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []ListAllUsersRow{}
+	items := []User{}
 	for rows.Next() {
-		var i ListAllUsersRow
+		var i User
 		if err := rows.Scan(
 			&i.ID,
 			&i.Email,
-			&i.Suspended,
+			&i.HashedPassword,
 			&i.Role,
+			&i.Suspended,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -148,7 +137,7 @@ func (q *Queries) ListAllUsers(ctx context.Context) ([]ListAllUsersRow, error) {
 }
 
 const listUsers = `-- name: ListUsers :many
-SELECT id, email, suspended, role, created_at FROM users
+SELECT id, email, hashed_password, role, suspended, created_at FROM users
 ORDER BY id
 LIMIT $1
 OFFSET $2
@@ -159,28 +148,21 @@ type ListUsersParams struct {
 	Offset int64 `json:"offset"`
 }
 
-type ListUsersRow struct {
-	ID        int64              `json:"id"`
-	Email     string             `json:"email"`
-	Suspended bool               `json:"suspended"`
-	Role      string             `json:"role"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
-}
-
-func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]ListUsersRow, error) {
+func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]User, error) {
 	rows, err := q.db.Query(ctx, listUsers, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []ListUsersRow{}
+	items := []User{}
 	for rows.Next() {
-		var i ListUsersRow
+		var i User
 		if err := rows.Scan(
 			&i.ID,
 			&i.Email,
-			&i.Suspended,
+			&i.HashedPassword,
 			&i.Role,
+			&i.Suspended,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -197,7 +179,7 @@ const updateUser = `-- name: UpdateUser :one
 UPDATE users
 set suspended = $2
 WHERE id = $1
-RETURNING id, email, suspended, role, created_at
+RETURNING id, email, hashed_password, role, suspended, created_at
 `
 
 type UpdateUserParams struct {
@@ -205,22 +187,15 @@ type UpdateUserParams struct {
 	Suspended bool  `json:"suspended"`
 }
 
-type UpdateUserRow struct {
-	ID        int64              `json:"id"`
-	Email     string             `json:"email"`
-	Suspended bool               `json:"suspended"`
-	Role      string             `json:"role"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
-}
-
-func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (UpdateUserRow, error) {
+func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error) {
 	row := q.db.QueryRow(ctx, updateUser, arg.ID, arg.Suspended)
-	var i UpdateUserRow
+	var i User
 	err := row.Scan(
 		&i.ID,
 		&i.Email,
-		&i.Suspended,
+		&i.HashedPassword,
 		&i.Role,
+		&i.Suspended,
 		&i.CreatedAt,
 	)
 	return i, err

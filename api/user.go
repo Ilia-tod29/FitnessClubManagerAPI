@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
 	"net/http"
+	"time"
 )
 
 type createUserRequest struct {
@@ -14,8 +15,32 @@ type createUserRequest struct {
 	Role     string `json:"role" binding:"required,oneof=admin user"`
 }
 
+type loginUserRequest struct {
+	Email    string `json:"email" binding:"required"`
+	Password string `json:"password" binding:"required"`
+}
+
+type loginUserResponse struct {
+	AccessToken string       `json:"access_token"`
+	User        userResponse `json:"user"`
+}
+
 type updateUserRequest struct {
 	Suspended string `json:"suspended" binding:"required,oneof=true false"`
+}
+
+type userResponse struct {
+	Email     string    `json:"email"`
+	Suspended bool      `json:"suspended"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+func newUserResponse(user db.User) userResponse {
+	return userResponse{
+		Email:     user.Email,
+		Suspended: user.Suspended,
+		CreatedAt: user.CreatedAt.Time,
+	}
 }
 
 func (s *Server) createUser(ctx *gin.Context) {
@@ -50,7 +75,8 @@ func (s *Server) createUser(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, user)
+	response := newUserResponse(user)
+	ctx.JSON(http.StatusOK, response)
 }
 
 func (s *Server) getUser(ctx *gin.Context) {
@@ -156,4 +182,72 @@ func (s *Server) deleteUser(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, user)
+}
+
+func (s *Server) loginUser(ctx *gin.Context) {
+	var req loginUserRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	user, err := s.store.GetUserByEmail(ctx, req.Email)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			ctx.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	err = util.CheckPassword(req.Password, user.HashedPassword)
+	if err != nil {
+		ctx.JSON(http.StatusUnauthorized, errorResponse(err))
+		return
+	}
+
+	accessToken, _, err := s.tokenMaker.CreateToken(
+		user.Email,
+		user.Role,
+		s.config.AccessTokenDuration,
+	)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	//refreshToken, refreshPayload, err := server.tokenMaker.CreateToken(
+	//	user.Email,
+	//	user.Role,
+	//	server.config.RefreshTokenDuration,
+	//)
+	//if err != nil {
+	//	ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+	//	return
+	//}
+
+	//session, err := server.store.CreateSession(ctx, db.CreateSessionParams{
+	//	ID:           refreshPayload.ID,
+	//	Username:     user.Username,
+	//	RefreshToken: refreshToken,
+	//	UserAgent:    ctx.Request.UserAgent(),
+	//	ClientIp:     ctx.ClientIP(),
+	//	IsBlocked:    false,
+	//	ExpiresAt:    refreshPayload.ExpiredAt,
+	//})
+	//if err != nil {
+	//	ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+	//	return
+	//}
+
+	rsp := loginUserResponse{
+		//SessionID:             session.ID,
+		AccessToken: accessToken,
+		//AccessTokenExpiresAt:  accessPayload.ExpiredAt,
+		//RefreshToken:          refreshToken,
+		//RefreshTokenExpiresAt: refreshPayload.ExpiredAt,
+		User: newUserResponse(user),
+	}
+	ctx.JSON(http.StatusOK, rsp)
 }
