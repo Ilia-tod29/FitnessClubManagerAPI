@@ -51,38 +51,47 @@ func NewServer(config util.Config, store *db.SQLStore) (*Server, error) {
 func (s *Server) setupRouter() {
 	router := gin.Default()
 
+	authRoutes := router.Group("/").Use(authMiddleware(s.tokenMaker))
+
 	// Users
 	// TODO: additional functionality - change password
+	// Unprotected
 	router.POST("/users", s.createUser)
 	router.POST("/users/login", s.loginUser)
-	router.PUT("/users/:id", s.updateUser)
-	router.GET("/users/:id", s.getUser)
-	router.GET("/allusers", s.listAllUsers)
-	router.GET("/users", s.listUsersByPages)
-	router.DELETE("/users/:id", s.deleteUser)
+	// Protected
+	authRoutes.PUT("/users/:id", s.updateUser)
+	authRoutes.GET("/users/:id", s.getUser)
+	authRoutes.GET("/allusers", s.listAllUsers)
+	authRoutes.GET("/users", s.listUsersByPages)
+	authRoutes.DELETE("/users/:id", s.deleteUser)
 
 	// Subscriptions
-	router.POST("/subscriptions", s.createSubscription)
-	router.GET("/subscriptions/:id", s.getSubscription)
-	router.GET("/subscriptions/user/:id", s.getAllSubscriptionsForAGivenUser)
-	router.GET("/allsubscriptions", s.listAllSubscriptions)
-	router.GET("/subscriptions", s.listSubscriptionsByPages)
-	router.DELETE("/subscriptions/:id", s.deleteSubscription)
+	// Protected
+	authRoutes.POST("/subscriptions", s.createSubscription)
+	authRoutes.GET("/subscriptions/:id", s.getSubscription)
+	authRoutes.GET("/subscriptions/user/:id", s.getAllSubscriptionsForAGivenUser)
+	authRoutes.GET("/allsubscriptions", s.listAllSubscriptions)
+	authRoutes.GET("/subscriptions", s.listSubscriptionsByPages)
+	authRoutes.DELETE("/subscriptions/:id", s.deleteSubscription)
 
 	// Inventory Items
-	router.POST("/inventoryitems", s.createInventoryItem)
-	router.PUT("/inventoryitems/:id", s.updateInventoryItem)
+	// Unprotected
 	router.GET("/inventoryitems/:id", s.getInventoryItem)
 	router.GET("/allinventoryitems", s.listAllInventoryItems)
 	router.GET("/inventoryitems", s.listInventoryItemsByPages)
-	router.DELETE("/inventoryitems/:id", s.deleteInventoryItem)
+	// Protected
+	authRoutes.POST("/inventoryitems", s.createInventoryItem)
+	authRoutes.PUT("/inventoryitems/:id", s.updateInventoryItem)
+	authRoutes.DELETE("/inventoryitems/:id", s.deleteInventoryItem)
 
 	// Gallery Items
-	router.POST("/gallery", s.createGalleryItem)
+	// Unprotected
 	router.GET("/gallery/:id", s.getGalleryItem)
 	router.GET("/allgallery", s.listAllGalleryItems)
 	router.GET("/gallery", s.listGalleryItemsByPages)
-	router.DELETE("/gallery/:id", s.deleteGalleryItem)
+	// Protected
+	authRoutes.POST("/gallery", s.createGalleryItem)
+	authRoutes.DELETE("/gallery/:id", s.deleteGalleryItem)
 
 	s.router = router
 }

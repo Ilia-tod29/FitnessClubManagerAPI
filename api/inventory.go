@@ -19,6 +19,7 @@ type updateInventoryItemRequest struct {
 	Image string `json:"image"`
 }
 
+// TODO: Handle Auth by role
 func (s *Server) createInventoryItem(ctx *gin.Context) {
 	var req createInventoryItemRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
@@ -96,6 +97,7 @@ func (s *Server) listInventoryItemsByPages(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, inventoryItems)
 }
 
+// TODO: Handle Auth by role
 func (s *Server) updateInventoryItem(ctx *gin.Context) {
 	var req idRequest
 	if err := ctx.ShouldBindUri(&req); err != nil {
@@ -184,6 +186,7 @@ func (s *Server) updateInventoryItem(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, inventoryItem)
 }
 
+// TODO: Handle Auth by role
 func (s *Server) deleteInventoryItem(ctx *gin.Context) {
 	var req idRequest
 	if err := ctx.ShouldBindUri(&req); err != nil {

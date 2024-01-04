@@ -12,6 +12,7 @@ type createGalleryItemRequest struct {
 	Image string `json:"image" binding:"required"`
 }
 
+// TODO: Handle Auth by role
 func (s *Server) createGalleryItem(ctx *gin.Context) {
 	var req createGalleryItemRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
@@ -85,6 +86,7 @@ func (s *Server) listGalleryItemsByPages(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, galleryItems)
 }
 
+// TODO: Handle Auth by role
 func (s *Server) deleteGalleryItem(ctx *gin.Context) {
 	var req idRequest
 	if err := ctx.ShouldBindUri(&req); err != nil {

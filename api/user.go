@@ -79,6 +79,7 @@ func (s *Server) createUser(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response)
 }
 
+// TODO: Handle Auth by role
 func (s *Server) getUser(ctx *gin.Context) {
 	var req idRequest
 	if err := ctx.ShouldBindUri(&req); err != nil {
@@ -99,6 +100,7 @@ func (s *Server) getUser(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, user)
 }
 
+// TODO: Handle Auth by role
 func (s *Server) listAllUsers(ctx *gin.Context) {
 	allUsers, err := s.store.ListAllUsers(ctx)
 	if err != nil {
@@ -109,6 +111,7 @@ func (s *Server) listAllUsers(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, allUsers)
 }
 
+// TODO: Handle Auth by role
 func (s *Server) listUsersByPages(ctx *gin.Context) {
 	var req listResourceByPagesRequest
 	if err := ctx.ShouldBindQuery(&req); err != nil {
@@ -129,6 +132,7 @@ func (s *Server) listUsersByPages(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, users)
 }
 
+// TODO: Handle Auth by role
 func (s *Server) updateUser(ctx *gin.Context) {
 	var req idRequest
 	if err := ctx.ShouldBindUri(&req); err != nil {
@@ -164,6 +168,7 @@ func (s *Server) updateUser(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, user)
 }
 
+// TODO: Handle Auth by role
 func (s *Server) deleteUser(ctx *gin.Context) {
 	var req idRequest
 	if err := ctx.ShouldBindUri(&req); err != nil {
