@@ -6,6 +6,7 @@ import (
 	"FitnessClubManagerAPI/util"
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"net/http"
 )
 
 // idRequest represents the data needed from the user when only ID is needed
@@ -100,6 +101,33 @@ func (s *Server) setupRouter() {
 // Start runs the HTTP server on a specific address.
 func (s *Server) Start(address string) error {
 	return s.router.Run(address)
+}
+
+func (s *Server) getCurrentUser(ctx *gin.Context, user *db.User) error {
+	authPayload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
+	var err error
+	*user, err = s.store.GetUserByEmail(ctx, authPayload.Email)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return err
+	}
+
+	return nil
+}
+
+func (s *Server) validateAdminPermissions(ctx *gin.Context) error {
+	var currentUser db.User
+	err := s.getCurrentUser(ctx, &currentUser)
+	if err != nil {
+		return err
+	}
+
+	if currentUser.Role != util.AdminRole {
+		err := fmt.Errorf("user don't have permissions to access this resource")
+		ctx.JSON(http.StatusUnauthorized, errorResponse(err))
+		return err
+	}
+	return nil
 }
 
 func errorResponse(err error) gin.H {

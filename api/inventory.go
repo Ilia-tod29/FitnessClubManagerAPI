@@ -19,7 +19,6 @@ type updateInventoryItemRequest struct {
 	Image string `json:"image"`
 }
 
-// TODO: Handle Auth by role
 func (s *Server) createInventoryItem(ctx *gin.Context) {
 	var req createInventoryItemRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
@@ -27,8 +26,13 @@ func (s *Server) createInventoryItem(ctx *gin.Context) {
 		return
 	}
 
+	err := s.validateAdminPermissions(ctx)
+	if err != nil {
+		return
+	}
+
 	var image pgtype.Text
-	err := image.Scan(req.Image)
+	err = image.Scan(req.Image)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
 		return
@@ -97,7 +101,6 @@ func (s *Server) listInventoryItemsByPages(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, inventoryItems)
 }
 
-// TODO: Handle Auth by role
 func (s *Server) updateInventoryItem(ctx *gin.Context) {
 	var req idRequest
 	if err := ctx.ShouldBindUri(&req); err != nil {
@@ -108,6 +111,11 @@ func (s *Server) updateInventoryItem(ctx *gin.Context) {
 	var upd updateInventoryItemRequest
 	if err := ctx.ShouldBindJSON(&upd); err != nil {
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	err := s.validateAdminPermissions(ctx)
+	if err != nil {
 		return
 	}
 
@@ -186,11 +194,15 @@ func (s *Server) updateInventoryItem(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, inventoryItem)
 }
 
-// TODO: Handle Auth by role
 func (s *Server) deleteInventoryItem(ctx *gin.Context) {
 	var req idRequest
 	if err := ctx.ShouldBindUri(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	err := s.validateAdminPermissions(ctx)
+	if err != nil {
 		return
 	}
 

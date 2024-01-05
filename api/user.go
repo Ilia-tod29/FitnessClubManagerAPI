@@ -35,6 +35,7 @@ type updateUserRequest struct {
 }
 
 type userResponse struct {
+	ID        int64     `uri:"id" binding:"required,min=1"`
 	Email     string    `json:"email"`
 	Suspended bool      `json:"suspended"`
 	CreatedAt time.Time `json:"created_at"`
@@ -42,6 +43,7 @@ type userResponse struct {
 
 func newUserResponse(user db.User) userResponse {
 	return userResponse{
+		ID:        user.ID,
 		Email:     user.Email,
 		Suspended: user.Suspended,
 		CreatedAt: user.CreatedAt.Time,
@@ -84,11 +86,15 @@ func (s *Server) createUser(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response)
 }
 
-// TODO: Handle Auth by role
 func (s *Server) getUser(ctx *gin.Context) {
 	var req idRequest
 	if err := ctx.ShouldBindUri(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	err := s.validateAdminPermissions(ctx)
+	if err != nil {
 		return
 	}
 
@@ -105,8 +111,12 @@ func (s *Server) getUser(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, user)
 }
 
-// TODO: Handle Auth by role
 func (s *Server) listAllUsers(ctx *gin.Context) {
+	err := s.validateAdminPermissions(ctx)
+	if err != nil {
+		return
+	}
+
 	allUsers, err := s.store.ListAllUsers(ctx)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
@@ -116,11 +126,15 @@ func (s *Server) listAllUsers(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, allUsers)
 }
 
-// TODO: Handle Auth by role
 func (s *Server) listUsersByPages(ctx *gin.Context) {
 	var req listResourceByPagesRequest
 	if err := ctx.ShouldBindQuery(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	err := s.validateAdminPermissions(ctx)
+	if err != nil {
 		return
 	}
 
@@ -137,7 +151,6 @@ func (s *Server) listUsersByPages(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, users)
 }
 
-// TODO: Handle Auth by role
 func (s *Server) updateUser(ctx *gin.Context) {
 	var req idRequest
 	if err := ctx.ShouldBindUri(&req); err != nil {
@@ -148,6 +161,11 @@ func (s *Server) updateUser(ctx *gin.Context) {
 	var upd updateUserRequest
 	if err := ctx.ShouldBindJSON(&upd); err != nil {
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	err := s.validateAdminPermissions(ctx)
+	if err != nil {
 		return
 	}
 
@@ -173,11 +191,15 @@ func (s *Server) updateUser(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, user)
 }
 
-// TODO: Handle Auth by role
 func (s *Server) deleteUser(ctx *gin.Context) {
 	var req idRequest
 	if err := ctx.ShouldBindUri(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	err := s.validateAdminPermissions(ctx)
+	if err != nil {
 		return
 	}
 

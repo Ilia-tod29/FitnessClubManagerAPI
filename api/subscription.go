@@ -2,7 +2,7 @@ package api
 
 import (
 	db "FitnessClubManagerAPI/db/sqlc"
-	"FitnessClubManagerAPI/token"
+	"FitnessClubManagerAPI/util"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
@@ -92,7 +92,6 @@ func (s *Server) createSubscription(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, subscription)
 }
 
-// TODO: Handle Auth by role
 func (s *Server) getSubscription(ctx *gin.Context) {
 	var req idRequest
 	if err := ctx.ShouldBindUri(&req); err != nil {
@@ -116,7 +115,7 @@ func (s *Server) getSubscription(ctx *gin.Context) {
 		return
 	}
 
-	if currentUser.ID != subscription.UserID {
+	if currentUser.Role != util.AdminRole && currentUser.ID != subscription.UserID {
 		err := fmt.Errorf("subscription doesn't belong to the authenticated user")
 		ctx.JSON(http.StatusUnauthorized, errorResponse(err))
 		return
@@ -125,7 +124,6 @@ func (s *Server) getSubscription(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, subscription)
 }
 
-// TODO: Handle Auth by role
 func (s *Server) getAllSubscriptionsForAGivenUser(ctx *gin.Context) {
 	var req idRequest
 	if err := ctx.ShouldBindUri(&req); err != nil {
@@ -149,7 +147,7 @@ func (s *Server) getAllSubscriptionsForAGivenUser(ctx *gin.Context) {
 		return
 	}
 
-	if currentUser.ID != req.ID {
+	if currentUser.Role != util.AdminRole && currentUser.ID != req.ID {
 		err := fmt.Errorf("subscriptions doesn't belong to the authenticated user")
 		ctx.JSON(http.StatusUnauthorized, errorResponse(err))
 		return
@@ -158,8 +156,12 @@ func (s *Server) getAllSubscriptionsForAGivenUser(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, subscriptions)
 }
 
-// TODO: Handle Auth by role
 func (s *Server) listAllSubscriptions(ctx *gin.Context) {
+	err := s.validateAdminPermissions(ctx)
+	if err != nil {
+		return
+	}
+
 	allSubscription, err := s.store.ListAllSubscriptions(ctx)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
@@ -169,11 +171,15 @@ func (s *Server) listAllSubscriptions(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, allSubscription)
 }
 
-// TODO: Handle Auth by role
 func (s *Server) listSubscriptionsByPages(ctx *gin.Context) {
 	var req listResourceByPagesRequest
 	if err := ctx.ShouldBindQuery(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	err := s.validateAdminPermissions(ctx)
+	if err != nil {
 		return
 	}
 
@@ -190,11 +196,15 @@ func (s *Server) listSubscriptionsByPages(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, users)
 }
 
-// TODO: Handle Auth by role
 func (s *Server) deleteSubscription(ctx *gin.Context) {
 	var req idRequest
 	if err := ctx.ShouldBindUri(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	err := s.validateAdminPermissions(ctx)
+	if err != nil {
 		return
 	}
 
@@ -209,10 +219,6 @@ func (s *Server) deleteSubscription(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, subscription)
-}
-
-func isDateWithinRange(targetDate, startDate, endDate time.Time) bool {
-	return !targetDate.Before(startDate) && !targetDate.After(endDate)
 }
 
 func (s Server) deleteOutdatedSubscriptions(ctx *gin.Context, userID int64, allSubscriptions []db.Subscription) ([]db.Subscription, error) {
@@ -235,14 +241,6 @@ func (s Server) deleteOutdatedSubscriptions(ctx *gin.Context, userID int64, allS
 	return deletedSubscriptions, nil
 }
 
-func (s *Server) getCurrentUser(ctx *gin.Context, user *db.User) error {
-	authPayload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
-	var err error
-	*user, err = s.store.GetUserByEmail(ctx, authPayload.Email)
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
-		return err
-	}
-
-	return nil
+func isDateWithinRange(targetDate, startDate, endDate time.Time) bool {
+	return !targetDate.Before(startDate) && !targetDate.After(endDate)
 }

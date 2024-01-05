@@ -12,7 +12,6 @@ type createGalleryItemRequest struct {
 	Image string `json:"image" binding:"required"`
 }
 
-// TODO: Handle Auth by role
 func (s *Server) createGalleryItem(ctx *gin.Context) {
 	var req createGalleryItemRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
@@ -20,8 +19,13 @@ func (s *Server) createGalleryItem(ctx *gin.Context) {
 		return
 	}
 
+	err := s.validateAdminPermissions(ctx)
+	if err != nil {
+		return
+	}
+
 	var image pgtype.Text
-	err := image.Scan(req.Image)
+	err = image.Scan(req.Image)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
 		return
@@ -86,11 +90,15 @@ func (s *Server) listGalleryItemsByPages(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, galleryItems)
 }
 
-// TODO: Handle Auth by role
 func (s *Server) deleteGalleryItem(ctx *gin.Context) {
 	var req idRequest
 	if err := ctx.ShouldBindUri(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	err := s.validateAdminPermissions(ctx)
+	if err != nil {
 		return
 	}
 
