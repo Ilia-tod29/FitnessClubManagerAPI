@@ -14,7 +14,7 @@ dropdb:
 	docker exec -it postgresDB dropdb fitness_club_manager
 
 createmigration:
-	migrate create -ext sql -dir db/migration -seq add_suspension #add a name of the migration - e.g. init_schema
+	migrate create -ext sql -dir db/migration -seq add_sessions #add a name of the migration - e.g. init_schema
 
 migrateup:
 	migrate -path db/migration -database "postgresql://root:root@localhost:5432/fitness_club_manager?sslmode=disable" -verbose up

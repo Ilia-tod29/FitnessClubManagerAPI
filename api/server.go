@@ -58,6 +58,7 @@ func (s *Server) setupRouter() {
 	// Unprotected
 	router.POST("/users", s.createUser)
 	router.POST("/users/login", s.loginUser)
+	router.POST("/tokens/renew_access", s.renewAccessToken)
 	// Protected
 	authRoutes.PUT("/users/:id", s.updateUser)
 	authRoutes.GET("/users/:id", s.getUser)

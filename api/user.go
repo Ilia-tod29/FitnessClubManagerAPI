@@ -5,6 +5,7 @@ import (
 	"FitnessClubManagerAPI/util"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	"net/http"
 	"time"
 )
@@ -21,8 +22,12 @@ type loginUserRequest struct {
 }
 
 type loginUserResponse struct {
-	AccessToken string       `json:"access_token"`
-	User        userResponse `json:"user"`
+	SessionID             pgtype.UUID  `json:"session_id"`
+	AccessToken           string       `json:"access_token"`
+	AccessTokenExpiresAt  time.Time    `json:"access_token_expires_at"`
+	RefreshToken          string       `json:"refresh_token"`
+	RefreshTokenExpiresAt time.Time    `json:"refresh_token_expires_at"`
+	User                  userResponse `json:"user"`
 }
 
 type updateUserRequest struct {
@@ -212,7 +217,7 @@ func (s *Server) loginUser(ctx *gin.Context) {
 		return
 	}
 
-	accessToken, _, err := s.tokenMaker.CreateToken(
+	accessToken, accessPayload, err := s.tokenMaker.CreateToken(
 		user.Email,
 		user.Role,
 		s.config.AccessTokenDuration,
@@ -222,37 +227,45 @@ func (s *Server) loginUser(ctx *gin.Context) {
 		return
 	}
 
-	//refreshToken, refreshPayload, err := server.tokenMaker.CreateToken(
-	//	user.Email,
-	//	user.Role,
-	//	server.config.RefreshTokenDuration,
-	//)
-	//if err != nil {
-	//	ctx.JSON(http.StatusInternalServerError, errorResponse(err))
-	//	return
-	//}
+	refreshToken, refreshPayload, err := s.tokenMaker.CreateToken(
+		user.Email,
+		user.Role,
+		s.config.RefreshTokenDuration,
+	)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
 
-	//session, err := server.store.CreateSession(ctx, db.CreateSessionParams{
-	//	ID:           refreshPayload.ID,
-	//	Username:     user.Username,
-	//	RefreshToken: refreshToken,
-	//	UserAgent:    ctx.Request.UserAgent(),
-	//	ClientIp:     ctx.ClientIP(),
-	//	IsBlocked:    false,
-	//	ExpiresAt:    refreshPayload.ExpiredAt,
-	//})
-	//if err != nil {
-	//	ctx.JSON(http.StatusInternalServerError, errorResponse(err))
-	//	return
-	//}
+	var pgUUID pgtype.UUID
+	var pgExpireAt pgtype.Timestamptz
+	err = pgUUID.Scan(refreshPayload.ID.String())
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	err = pgExpireAt.Scan(refreshPayload.ExpiredAt)
+	session, err := s.store.CreateSession(ctx, db.CreateSessionParams{
+		ID:           pgUUID,
+		Email:        user.Email,
+		RefreshToken: refreshToken,
+		UserAgent:    ctx.Request.UserAgent(),
+		ClientIp:     ctx.ClientIP(),
+		IsBlocked:    false,
+		ExpiresAt:    pgExpireAt,
+	})
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
 
 	rsp := loginUserResponse{
-		//SessionID:             session.ID,
-		AccessToken: accessToken,
-		//AccessTokenExpiresAt:  accessPayload.ExpiredAt,
-		//RefreshToken:          refreshToken,
-		//RefreshTokenExpiresAt: refreshPayload.ExpiredAt,
-		User: newUserResponse(user),
+		SessionID:             session.ID,
+		AccessToken:           accessToken,
+		AccessTokenExpiresAt:  accessPayload.ExpiredAt,
+		RefreshToken:          refreshToken,
+		RefreshTokenExpiresAt: refreshPayload.ExpiredAt,
+		User:                  newUserResponse(user),
 	}
 	ctx.JSON(http.StatusOK, rsp)
 }
