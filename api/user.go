@@ -13,7 +13,6 @@ import (
 type createUserRequest struct {
 	Email    string `json:"email" binding:"required"`
 	Password string `json:"password" binding:"required"`
-	Role     string `json:"role" binding:"required,oneof=admin user"`
 }
 
 type loginUserRequest struct {
@@ -68,7 +67,7 @@ func (s *Server) createUser(ctx *gin.Context) {
 		HashedPassword: hashedPassword,
 		// We don't suspend a user on creation
 		Suspended: false,
-		Role:      req.Role,
+		Role:      util.UserRole,
 	}
 
 	user, err := s.store.CreateUser(ctx, arg)

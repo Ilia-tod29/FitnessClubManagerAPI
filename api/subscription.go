@@ -46,6 +46,12 @@ func (s *Server) createSubscription(ctx *gin.Context) {
 		return
 	}
 
+	if currentUser.Role == util.AdminRole {
+		err := fmt.Errorf("admin users can't have subscriptions")
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
 	allSubscriptions, err := s.store.ListAllSubscriptionsForAGivenUser(ctx, currentUser.ID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
