@@ -12,6 +12,7 @@ import (
 )
 
 type createSubscriptionRequest struct {
+	Email     string `json:"email" binding:"required,email"`
 	StartDate string `json:"start_date" binding:"required"`
 	EndDate   string `json:"end_date" binding:"required"`
 }
@@ -40,49 +41,33 @@ func (s *Server) createSubscription(ctx *gin.Context) {
 		return
 	}
 
-	var currentUser db.User
-	err = s.getCurrentUser(ctx, &currentUser)
+	err = s.validateAdminPermissions(ctx)
 	if err != nil {
 		return
 	}
 
-	if currentUser.Role == util.AdminRole {
+	subscriptionUser, err := s.store.GetUserByEmail(ctx, req.Email)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			ctx.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	if subscriptionUser.Role == util.AdminRole {
 		err := fmt.Errorf("admin users can't have subscriptions")
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
 
-	allSubscriptions, err := s.store.ListAllSubscriptionsForAGivenUser(ctx, currentUser.ID)
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
-		return
-	}
-
-	for _, subscription := range allSubscriptions {
-		if isDateWithinRange(startDate, subscription.StartDate.Time, subscription.EndDate.Time) {
-			err := fmt.Errorf("the start date cannot be within the validity period of another subscription")
-			ctx.JSON(http.StatusBadRequest, errorResponse(err))
-			return
-		}
-	}
-
-	var pgDateStartDate pgtype.Date
-	var pgDateEndDate pgtype.Date
-	err = pgDateStartDate.Scan(startDate)
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, errorResponse(err))
-		return
-	}
-	err = pgDateEndDate.Scan(endDate)
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, errorResponse(err))
-		return
-	}
+	pgStartDate, pgEndDate, err := s.validatePeriod(ctx, startDate, endDate, subscriptionUser.ID)
 
 	arg := db.CreateSubscriptionParams{
-		UserID:    currentUser.ID,
-		StartDate: pgDateStartDate,
-		EndDate:   pgDateEndDate,
+		UserID:    subscriptionUser.ID,
+		StartDate: pgStartDate,
+		EndDate:   pgEndDate,
 	}
 	subscription, err := s.store.CreateSubscription(ctx, arg)
 	if err != nil {
@@ -249,4 +234,35 @@ func (s Server) deleteOutdatedSubscriptions(ctx *gin.Context, userID int64, allS
 
 func isDateWithinRange(targetDate, startDate, endDate time.Time) bool {
 	return !targetDate.Before(startDate) && !targetDate.After(endDate)
+}
+
+func (s Server) validatePeriod(ctx *gin.Context, startDate, endDate time.Time, userId int64) (pgtype.Date, pgtype.Date, error) {
+	allSubscriptions, err := s.store.ListAllSubscriptionsForAGivenUser(ctx, userId)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return pgtype.Date{}, pgtype.Date{}, err
+	}
+
+	for _, subscription := range allSubscriptions {
+		if isDateWithinRange(startDate, subscription.StartDate.Time, subscription.EndDate.Time) {
+			err := fmt.Errorf("the start date cannot be within the validity period of another subscription")
+			ctx.JSON(http.StatusBadRequest, errorResponse(err))
+			return pgtype.Date{}, pgtype.Date{}, err
+		}
+	}
+
+	var pgDateStartDate pgtype.Date
+	var pgDateEndDate pgtype.Date
+	err = pgDateStartDate.Scan(startDate)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return pgtype.Date{}, pgtype.Date{}, err
+	}
+	err = pgDateEndDate.Scan(endDate)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return pgtype.Date{}, pgtype.Date{}, err
+	}
+
+	return pgDateStartDate, pgDateEndDate, nil
 }

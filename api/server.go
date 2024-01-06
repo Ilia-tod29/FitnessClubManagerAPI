@@ -41,10 +41,6 @@ func NewServer(config util.Config, store *db.SQLStore) (*Server, error) {
 		tokenMaker: tokenMaker,
 	}
 
-	//if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
-	//	v.RegisterValidation("currency", validCurrency)
-	//}
-
 	server.setupRouter()
 	return server, nil
 }
@@ -94,6 +90,12 @@ func (s *Server) setupRouter() {
 	// Protected
 	authRoutes.POST("/gallery", s.createGalleryItem)
 	authRoutes.DELETE("/gallery/:id", s.deleteGalleryItem)
+
+	// Stripes
+	authRoutes.POST("/create-checkout-session", s.createCheckoutSession)
+
+	// Define your webhook endpoint
+	router.POST("/webhook", s.handleWebhook)
 
 	s.router = router
 }

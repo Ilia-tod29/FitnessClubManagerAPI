@@ -7,6 +7,7 @@ import (
 	"context"
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/lib/pq"
+	"github.com/stripe/stripe-go/v76"
 	"log"
 )
 
@@ -25,6 +26,8 @@ func main() {
 	if err != nil {
 		log.Fatal("cannot connect to db", err)
 	}
+
+	stripe.Key = config.StripesSecretKey
 
 	store := db.NewStore(connPool)
 	server, err := api.NewServer(config, store)
