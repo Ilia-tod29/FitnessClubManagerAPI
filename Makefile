@@ -31,4 +31,7 @@ sqlc:
 server:
 	go run main.go
 
-.PHONY: postgres stoppostgres rmpostgres createdb dropdb createmigration migrateup migratedown sqlc server
+stripelistener:
+	stripe listen --forward-to localhost:8080/webhook
+
+.PHONY: postgres stoppostgres rmpostgres createdb dropdb createmigration migrateup migratedown sqlc server stripelistener
