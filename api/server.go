@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
+	"time"
 )
 
 // idRequest represents the data needed from the user when only ID is needed
@@ -134,4 +135,19 @@ func (s *Server) validateAdminPermissions(ctx *gin.Context) error {
 
 func errorResponse(err error) gin.H {
 	return gin.H{"error": err.Error()}
+}
+
+func parseDates(ctx *gin.Context, startDate, endDate string) (time.Time, time.Time, error) {
+	parsedStartDate, err := time.Parse("02.01.2006", startDate)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return time.Time{}, time.Time{}, err
+	}
+	parsedEndDate, err := time.Parse("02.01.2006", endDate)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return time.Time{}, time.Time{}, err
+	}
+
+	return parsedStartDate, parsedEndDate, nil
 }

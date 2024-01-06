@@ -39,6 +39,16 @@ func (s *Server) createCheckoutSession(ctx *gin.Context) {
 		return
 	}
 
+	parsedStartDate, parsedEndDate, err := parseDates(ctx, req.StartDate, req.EndDate)
+	if err != nil {
+		return
+	}
+
+	_, _, err = s.validatePeriod(ctx, parsedStartDate, parsedEndDate, currentUser.ID)
+	if err != nil {
+		return
+	}
+
 	params := stripe.CheckoutSessionParams{
 		PaymentMethodTypes: getPaymentMethods(),
 		Mode:               stripe.String(string(stripe.CheckoutSessionModePayment)),
@@ -54,8 +64,8 @@ func (s *Server) createCheckoutSession(ctx *gin.Context) {
 			"end_date":   req.EndDate,
 			"user_id":    strconv.FormatInt(currentUser.ID, 10),
 		},
-		SuccessURL: stripe.String(s.config.ClientBaseUrl + homePageNavigator),
-		CancelURL:  stripe.String(s.config.ClientBaseUrl + subscriptionsPageNavigator),
+		SuccessURL: stripe.String(s.config.ClientBaseUrl + subscriptionsPageNavigator),
+		CancelURL:  stripe.String(s.config.ClientBaseUrl + homePageNavigator),
 	}
 
 	currentSession, err := session.New(&params)

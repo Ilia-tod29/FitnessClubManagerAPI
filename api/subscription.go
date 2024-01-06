@@ -24,20 +24,8 @@ func (s *Server) createSubscription(ctx *gin.Context) {
 		return
 	}
 
-	startDate, err := time.Parse("02.01.2006", req.StartDate)
+	parsedStartDate, parsedEndDate, err := parseDates(ctx, req.StartDate, req.EndDate)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, errorResponse(err))
-		return
-	}
-	endDate, err := time.Parse("02.01.2006", req.EndDate)
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, errorResponse(err))
-		return
-	}
-
-	if startDate.After(endDate) {
-		err := fmt.Errorf("the start date cannot be after the end date")
-		ctx.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
 
@@ -62,7 +50,10 @@ func (s *Server) createSubscription(ctx *gin.Context) {
 		return
 	}
 
-	pgStartDate, pgEndDate, err := s.validatePeriod(ctx, startDate, endDate, subscriptionUser.ID)
+	pgStartDate, pgEndDate, err := s.validatePeriod(ctx, parsedStartDate, parsedEndDate, subscriptionUser.ID)
+	if err != nil {
+		return
+	}
 
 	arg := db.CreateSubscriptionParams{
 		UserID:    subscriptionUser.ID,
@@ -237,6 +228,12 @@ func isDateWithinRange(targetDate, startDate, endDate time.Time) bool {
 }
 
 func (s Server) validatePeriod(ctx *gin.Context, startDate, endDate time.Time, userId int64) (pgtype.Date, pgtype.Date, error) {
+	if startDate.After(endDate) {
+		err := fmt.Errorf("the start date cannot be after the end date")
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return pgtype.Date{}, pgtype.Date{}, err
+	}
+
 	allSubscriptions, err := s.store.ListAllSubscriptionsForAGivenUser(ctx, userId)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))

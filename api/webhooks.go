@@ -11,7 +11,6 @@ import (
 	"io"
 	"net/http"
 	"strconv"
-	"time"
 )
 
 func (s Server) handleWebhook(ctx *gin.Context) {
@@ -70,18 +69,15 @@ func (s Server) handleWebhook(ctx *gin.Context) {
 }
 
 func (s Server) registerSubscription(ctx *gin.Context, startDate, endDate string, userId int64) {
-	parsedStartDate, err := time.Parse("02.01.2006", startDate)
+	parsedStartDate, parsedEndDate, err := parseDates(ctx, startDate, endDate)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, errorResponse(err))
-		return
-	}
-	parsedEndDate, err := time.Parse("02.01.2006", endDate)
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
 
 	pgStartDate, pgEndDate, err := s.validatePeriod(ctx, parsedStartDate, parsedEndDate, userId)
+	if err != nil {
+		return
+	}
 
 	arg := db.CreateSubscriptionParams{
 		UserID:    userId,
