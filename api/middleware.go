@@ -48,6 +48,24 @@ func authMiddleware(tokenMaker token.Maker) gin.HandlerFunc {
 		}
 
 		ctx.Set(authorizationPayloadKey, payload)
+
+		// Continue to the next middleware or route handler
+		ctx.Next()
+	}
+}
+
+// CORSMiddleware creates a gin middleware for cors
+func CORSMiddleware() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		ctx.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		ctx.Writer.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+		ctx.Writer.Header().Set("Access-Control-Allow-Headers", "Origin, Authorization, Content-Type, X-Requested-With, Accept")
+
+		if ctx.Request.Method == http.MethodOptions {
+			ctx.AbortWithStatus(http.StatusNoContent)
+			return
+		}
+
 		ctx.Next()
 	}
 }

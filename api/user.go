@@ -36,6 +36,7 @@ type updateUserRequest struct {
 type userResponse struct {
 	ID        int64     `uri:"id" binding:"required,min=1"`
 	Email     string    `json:"email"`
+	Role      string    `json:"role"`
 	Suspended bool      `json:"suspended"`
 	CreatedAt time.Time `json:"created_at"`
 }
@@ -44,6 +45,7 @@ func newUserResponse(user db.User) userResponse {
 	return userResponse{
 		ID:        user.ID,
 		Email:     user.Email,
+		Role:      user.Role,
 		Suspended: user.Suspended,
 		CreatedAt: user.CreatedAt.Time,
 	}
@@ -81,8 +83,10 @@ func (s *Server) createUser(ctx *gin.Context) {
 		return
 	}
 
-	response := newUserResponse(user)
-	ctx.JSON(http.StatusOK, response)
+	err = s.createSessionForUser(ctx, user)
+	if err != nil {
+		return
+	}
 }
 
 func (s *Server) getUser(ctx *gin.Context) {
@@ -238,24 +242,33 @@ func (s *Server) loginUser(ctx *gin.Context) {
 		return
 	}
 
+	err = s.createSessionForUser(ctx, user)
+	if err != nil {
+		return
+	}
+}
+
+func (s *Server) createSessionForUser(ctx *gin.Context, user db.User) error {
 	accessToken, accessPayload, err := s.tokenMaker.CreateToken(
+		user.ID,
 		user.Email,
 		user.Role,
 		s.config.AccessTokenDuration,
 	)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
-		return
+		return err
 	}
 
 	refreshToken, refreshPayload, err := s.tokenMaker.CreateToken(
+		user.ID,
 		user.Email,
 		user.Role,
 		s.config.RefreshTokenDuration,
 	)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
-		return
+		return err
 	}
 
 	var pgUUID pgtype.UUID
@@ -263,7 +276,7 @@ func (s *Server) loginUser(ctx *gin.Context) {
 	err = pgUUID.Scan(refreshPayload.ID.String())
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
-		return
+		return err
 	}
 	err = pgExpireAt.Scan(refreshPayload.ExpiredAt)
 	session, err := s.store.CreateSession(ctx, db.CreateSessionParams{
@@ -277,7 +290,7 @@ func (s *Server) loginUser(ctx *gin.Context) {
 	})
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
-		return
+		return err
 	}
 
 	rsp := loginUserResponse{
@@ -289,4 +302,5 @@ func (s *Server) loginUser(ctx *gin.Context) {
 		User:                  newUserResponse(user),
 	}
 	ctx.JSON(http.StatusOK, rsp)
+	return nil
 }

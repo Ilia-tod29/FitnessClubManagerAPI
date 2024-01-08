@@ -48,8 +48,9 @@ func NewServer(config util.Config, store *db.SQLStore) (*Server, error) {
 
 func (s *Server) setupRouter() {
 	router := gin.Default()
+	router.Use(CORSMiddleware())
 
-	authRoutes := router.Group("/").Use(authMiddleware(s.tokenMaker))
+	authRoutes := router.Group("/").Use(authMiddleware(s.tokenMaker), CORSMiddleware())
 
 	// Users
 	// TODO: additional functionality - change password
