@@ -12,8 +12,8 @@ import (
 )
 
 const (
-	homePageNavigator          = "/home.html"
-	subscriptionsPageNavigator = "/subscriptions.html"
+	homePageNavigator          = "/home"
+	subscriptionsPageNavigator = "/subscriptions"
 )
 
 type createCheckoutSessionRequest struct {

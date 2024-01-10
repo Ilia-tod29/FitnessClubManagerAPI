@@ -278,7 +278,7 @@ func (s *Server) createSessionForUser(ctx *gin.Context, user db.User) error {
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return err
 	}
-	err = pgExpireAt.Scan(refreshPayload.ExpiredAt)
+	err = pgExpireAt.Scan(refreshPayload.ExpiresAt)
 	session, err := s.store.CreateSession(ctx, db.CreateSessionParams{
 		ID:           pgUUID,
 		Email:        user.Email,
@@ -296,9 +296,9 @@ func (s *Server) createSessionForUser(ctx *gin.Context, user db.User) error {
 	rsp := loginUserResponse{
 		SessionID:             session.ID,
 		AccessToken:           accessToken,
-		AccessTokenExpiresAt:  accessPayload.ExpiredAt,
+		AccessTokenExpiresAt:  accessPayload.ExpiresAt,
 		RefreshToken:          refreshToken,
-		RefreshTokenExpiresAt: refreshPayload.ExpiredAt,
+		RefreshTokenExpiresAt: refreshPayload.ExpiresAt,
 		User:                  newUserResponse(user),
 	}
 	ctx.JSON(http.StatusOK, rsp)
