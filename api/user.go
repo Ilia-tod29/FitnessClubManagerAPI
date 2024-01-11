@@ -206,6 +206,22 @@ func (s *Server) deleteUser(ctx *gin.Context) {
 		return
 	}
 
+	userToBeDeleted, err := s.store.GetUser(ctx, req.ID)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			ctx.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	_, err = s.store.DeleteSessionsByUser(ctx, userToBeDeleted.Email)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
 	user, err := s.store.DeleteUser(ctx, req.ID)
 	if err != nil {
 		if err == pgx.ErrNoRows {

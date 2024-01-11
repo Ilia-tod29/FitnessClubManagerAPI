@@ -59,6 +59,41 @@ func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) (S
 	return i, err
 }
 
+const deleteSession = `-- name: DeleteSessionsByUser :many
+DELETE FROM sessions
+WHERE email = $1
+RETURNING id, email, refresh_token, user_agent, client_ip, is_blocked, expires_at, created_at
+`
+
+func (q *Queries) DeleteSessionsByUser(ctx context.Context, email string) ([]Session, error) {
+	rows, err := q.db.Query(ctx, deleteSession, email)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Session{}
+	for rows.Next() {
+		var i Session
+		if err := rows.Scan(
+			&i.ID,
+			&i.Email,
+			&i.RefreshToken,
+			&i.UserAgent,
+			&i.ClientIp,
+			&i.IsBlocked,
+			&i.ExpiresAt,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getSession = `-- name: GetSession :one
 SELECT id, email, refresh_token, user_agent, client_ip, is_blocked, expires_at, created_at FROM sessions
 WHERE id = $1 LIMIT 1

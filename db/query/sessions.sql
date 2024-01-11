@@ -14,3 +14,8 @@ INSERT INTO sessions (
 -- name: GetSession :one
 SELECT * FROM sessions
 WHERE id = $1 LIMIT 1;
+
+-- name: DeleteSessionsByUser :many
+DELETE FROM users
+WHERE email = $1
+RETURNING *;
