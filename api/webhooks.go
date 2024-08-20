@@ -9,6 +9,7 @@ import (
 	"github.com/stripe/stripe-go/v76/paymentintent"
 	"github.com/stripe/stripe-go/v76/webhook"
 	"io"
+	"log"
 	"net/http"
 	"strconv"
 )
@@ -35,11 +36,12 @@ func (s Server) handleWebhook(ctx *gin.Context) {
 	// If you are testing with the CLI, find the secret by running 'stripe listen'
 	// If you are using an endpoint defined with the API or dashboard, look in your webhook settings
 	// at https://dashboard.stripe.com/webhooks
-	endpointSecret := "whsec_709f12babc10f61ace3918a07fc65fce1490bcd2d1beed43efc0809e845924bb"
+	endpointSecret := "whsec_ceb5f04dc212e04d8ade74cccdee54e7fb98aeb4cbc1dd03c6233b73570cf541"
 	signatureHeader := ctx.Request.Header.Get("Stripe-Signature")
-	event, err = webhook.ConstructEvent(payload, signatureHeader, endpointSecret)
+	event, err = webhook.ConstructEventWithOptions(payload, signatureHeader, endpointSecret, webhook.ConstructEventOptions{IgnoreAPIVersionMismatch: true})
 	if err != nil {
 		errToReturn := fmt.Errorf("webhook signature verification failed: %v", err.Error())
+		log.Println(errToReturn)
 		ctx.JSON(http.StatusBadRequest, errorResponse(errToReturn))
 		return
 	}

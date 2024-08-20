@@ -55,7 +55,7 @@ func (s *Server) createCheckoutSession(ctx *gin.Context) {
 		LineItems: []*stripe.CheckoutSessionLineItemParams{
 			{
 				// Provide the exact Price ID (for example, pr_1234) of the product you want to sell
-				Price:    stripe.String("price_1OVMJPETgyr4pC7GeEwfnQHE"),
+				Price:    stripe.String("price_1Pi180LVhdNKmMg1US4Yy25U"),
 				Quantity: stripe.Int64(1),
 			},
 		},
